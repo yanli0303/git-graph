@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://unpkg.com/@gitgraph/js"></script>
+  </head>
+  <body>
+    <div id="graph-container"></div>
+    <script>
+      const graphContainer = document.getElementById('graph-container');
+      const template = GitgraphJS.templateExtend('metro', {
+        colors: ['#6699FF', '#ff9100', '#CC99FF'],
+        branch: {
+          spacing: 100,
+        },
+        commit: {
+          spacing: 50,
+          dot: {
+            size: 20,
+            strokeColor: '#ff0000',
+          },
+          message: {
+            displayAuthor: false,
+          },
+        },
+      });
+      let HEAD = -1;
+      const commit = (branch, message, options = {}) => {
+        branch.commit({
+          subject: message,
+          dotText: `${HEAD + 1}`,
+          ...options,
+        });
+      };
+      const merge = (from, to, message = null, fastForward = false) => {
+        to.merge({
+          branch: from,
+          fastForward,
+          commitOptions: {
+            subject: message || `Merge from ${from.name}`,
+            dotText: `${HEAD + 1}`,
+          },
+        });
+      };
+
+      const branches = ['hyper_dev', 'private_dev', 'm2021'];
+
+      // Instantiate the graph.
+      const gitgraph = GitgraphJS.createGitgraph(graphContainer, {
+        orientation: GitgraphJS.Orientation.VerticalReverse,
+        compareBranchesOrder: (a, b) =>
+          branches.indexOf(a) - branches.indexOf(b),
+        template: template,
+        branchLabelOnEveryCommit: true,
+        generateCommitHash: () => {
+          return `${++HEAD} -`;
+        },
+      });
+
+      // Simulate git commands with Gitgraph API.
+      const hyperDev = gitgraph.branch('hyper_dev');
+      commit(hyperDev, 'beginning of time', { branchToDisplay: false });
+
+      const m2021 = gitgraph.branch({
+        parent: 'hyper_dev',
+        name: 'm2021',
+      });
+
+      const private = gitgraph.branch({
+        parent: 'hyper_dev',
+        name: 'private_dev',
+      });
+
+      commit(hyperDev, 'Extension Feature E1');
+      merge(hyperDev, private);
+
+      commit(m2021, 'SDK Feature S1');
+      merge(m2021, private);
+
+      commit(hyperDev, 'Extension Feature E2');
+      hyperDev.tag('Extension v11.3.0');
+      merge(hyperDev, private);
+
+      commit(m2021, 'SDK Feature S2');
+      m2021.tag('SDK v11.3.0');
+      merge(m2021, private);
+
+      merge(private, hyperDev);
+      merge(hyperDev, m2021, 'A new start from hyper_dev');
+
+      commit(hyperDev, 'Extension Feature E3');
+      merge(hyperDev, private);
+
+      commit(m2021, 'SDK Feature S3');
+      merge(m2021, private);
+    </script>
+  </body>
+</html>
